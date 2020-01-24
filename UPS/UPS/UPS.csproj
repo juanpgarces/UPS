@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Authors>Juan P. Garces</Authors>
+    <PackageProjectUrl>https://github.com/juanp3053/UPS</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/juanp3053/UPS</RepositoryUrl>
+    <RepositoryType>Git</RepositoryType>
+    <Description>UPS (Uninterrupted Power Supply), names for now: Uninterrupted Task Fulfiller, UT-Executer</Description>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DocumentationFile>C:\Users\JuanPGarces\Documents\GitHub\UPS\UPS\UPS\UPS.xml</DocumentationFile>
+  </PropertyGroup>
+
+</Project>
