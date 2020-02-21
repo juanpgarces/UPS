@@ -8,10 +8,18 @@
     <RepositoryUrl>https://github.com/juanp3053/UPS</RepositoryUrl>
     <RepositoryType>Git</RepositoryType>
     <Description>UPS (Uninterrupted Power Supply), names for now: Uninterrupted Task Fulfiller, UT-Executer</Description>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>$(Version)</AssemblyVersion>
+    <FileVersion>$(Version)</FileVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <DocumentationFile>C:\Users\JuanPGarces\Documents\GitHub\UPS\UPS\UPS\UPS.xml</DocumentationFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Folder Include="Models\" />
+    <Folder Include="Utilities\" />
+  </ItemGroup>
 
 </Project>
