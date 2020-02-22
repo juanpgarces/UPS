@@ -4,5 +4,23 @@
         <name>UPS</name>
     </assembly>
     <members>
+        <member name="T:UPS.UPSService">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="M:UPS.UPSService.Shutdown">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="M:UPS.UPSService.Enqueue(System.Func{System.Threading.Tasks.Task{System.Object}},UPS.Enums.Priority)">
+            <summary>
+            
+            </summary>
+            <param name="func"></param>
+            <param name="priority"></param>
+            <returns></returns>
+        </member>
     </members>
 </doc>

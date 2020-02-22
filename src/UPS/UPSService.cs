@@ -12,7 +12,7 @@ namespace UPS
     /// <summary>
     /// 
     /// </summary>
-    public static class UPS
+    public static class UPSService
     {
         // Lists and Queues
         private static List<ConcurrentQueue<ReferencedFunc>> concurrentQueues = new List<ConcurrentQueue<ReferencedFunc>>();
@@ -33,7 +33,7 @@ namespace UPS
 
         public static void Initialize(int extraQueueLevels, int maxThreads)
         {
-            UPS.maxThreads = maxThreads == 0 ? 999 : maxThreads;
+            UPSService.maxThreads = maxThreads == 0 ? 999 : maxThreads;
             InitializePriorityQueues(Enum.GetValues(typeof(Priority)).Length + extraQueueLevels);
             Interlocked.Exchange(ref isInitiated, 1);
         }
