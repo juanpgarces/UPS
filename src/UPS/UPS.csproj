@@ -15,7 +15,8 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <DocumentationFile>C:\Users\JuanPGarces\Documents\GitHub\UPS\UPS.xml</DocumentationFile>
+    <DocumentationFile>C:\Users\JuanPGarces\Documents\GitHub\UPS\src\UPS.xml</DocumentationFile>
+    <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
   </PropertyGroup>
 
   <ItemGroup>

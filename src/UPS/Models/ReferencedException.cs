@@ -10,7 +10,7 @@ namespace UPS.Models
     public class ReferencedException
     {
         /// <summary>
-        /// 
+        /// D
         /// </summary>
         public Guid guid { get; set; }
 
