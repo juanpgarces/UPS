@@ -6,8 +6,8 @@ namespace UPS.Enums
 {
     public enum Priority
     {
-        Low,
-        Medium,
-        High
+        High = 0,
+        Medium = 1,
+        Low = 2
     }
 }
