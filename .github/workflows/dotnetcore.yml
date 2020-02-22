@@ -14,6 +14,6 @@ jobs:
       with:
         dotnet-version: 2.2.108
     - name: Build with dotnet
-      run: dotnet build ~/src/UPS.sln --configuration Release
+      run: dotnet build ~/UPS/src/UPS.sln --configuration Release
     - name: Test with dotnet
-      run: dotnet test ~/UPS.Test/UPS.Test.csproj
+      run: dotnet test ~/UPS/UPS.Test/UPS.Test.csproj
