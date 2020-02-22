@@ -5,7 +5,16 @@ VisualStudioVersion = 16.0.29709.97
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UPS", "UPS\UPS.csproj", "{19A30DF2-226D-4EE5-B493-6C4BE8DD9A08}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UPS.Test", "..\UPS.Test\UPS.Test.csproj", "{27540084-ED3F-4A44-99E0-AF0A6251C1E7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UPS.Test", "..\UPS.Test\UPS.Test.csproj", "{27540084-ED3F-4A44-99E0-AF0A6251C1E7}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{7ADA583A-2540-4707-B66D-0D1AF4E0C00C}"
+	ProjectSection(SolutionItems) = preProject
+		..\Directory.Build.props = ..\Directory.Build.props
+		..\.github\workflows\dotnetcore.yml = ..\.github\workflows\dotnetcore.yml
+		..\LICENSE = ..\LICENSE
+		..\README.md = ..\README.md
+		..\version.json = ..\version.json
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
