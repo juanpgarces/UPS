@@ -19,8 +19,8 @@ jobs:
     - name: Restore packages
       run: nuget restore src\UPS.sln
     - uses: aarnott/nbgv@v0.3
-        with:
-            setAllVars: true
+      with:
+        setAllVars: true
     - run: echo "NBGV_SemVer2 $NBGV_SemVer2"
     - name: Build with dotnet
       run: dotnet build src\UPS.sln --configuration Release
