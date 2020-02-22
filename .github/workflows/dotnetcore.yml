@@ -10,10 +10,10 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Setup .NET Core
-      uses: actions/setup-dotnet@v1
+    - uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: 2.2.108
+        dotnet-version: 3.1.100 # SDK Version to use.
     - name: Build with dotnet
-      run: dotnet build ~/UPS/src/UPS.sln --configuration Release
+      run: dotnet build /src/UPS.sln --configuration Release
     - name: Test with dotnet
-      run: dotnet test ~/UPS/UPS.Test/UPS.Test.csproj
+      run: dotnet test /UPS.Test/UPS.Test.csproj
