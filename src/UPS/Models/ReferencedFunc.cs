@@ -6,7 +6,7 @@ using UPS.Enums;
 
 namespace UPS.Models
 {
-    public class ReferencedTask
+    public class ReferencedFunc
     {
         public Guid guid { get; set; }
         public Func<Task<object>> func { get; set; }

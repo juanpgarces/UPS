@@ -9,54 +9,76 @@ using UPS.Models;
 
 namespace UPS
 {
+    /// <summary>
+    /// 
+    /// </summary>
     public static class UPS
     {
-        private static List<ConcurrentQueue<ReferencedTask>> concurrentQueues = new List<ConcurrentQueue<ReferencedTask>>();
-        private static ConcurrentQueue<ReferencedResult> completedTasks = new ConcurrentQueue<ReferencedResult>();
-        private static ConcurrentQueue<ReferencedException> failedTasks = new ConcurrentQueue<ReferencedException>();
+        // Lists and Queues
+        private static List<ConcurrentQueue<ReferencedFunc>> concurrentQueues = new List<ConcurrentQueue<ReferencedFunc>>();
+        private static ConcurrentQueue<ReferencedResult> completedFunctions = new ConcurrentQueue<ReferencedResult>();
+        private static ConcurrentQueue<ReferencedException> failedFunctions = new ConcurrentQueue<ReferencedException>();
 
-        private static int numberOfAttempts = 3;
-        private static long maxThreadNumber = 1;
+        // Operation and Initiation
         private static long isInitiated = 0;
-        private static long currentCount = 0;
         private static long isProcessing = 0;
-        private static int queueNumber = 0;
-        // Probably have something like you can pass in the amount of 'support/extra queues'
-        // Give people the ability to decide their own priority levels?
-        public static void Initialize(int extraQueuesNumber, int maxThreads)
-        {
-            maxThreadNumber = maxThreads == 0 ? 999 : maxThreads;
-            queueNumber = Enum.GetValues(typeof(Priority)).Length + extraQueuesNumber;
-            for (int i = 0; i <= queueNumber; i++)
-            {
-                concurrentQueues.Add(new ConcurrentQueue<ReferencedTask>());
-            }
+        private static int maxQueues = 0;
+        private static int maxFailedAttempts = 4;
+        private static long maxThreads = 1;
+        private static int maxFailedReferences = 50;
+        private static int maxCompletedReferences = 50;
 
+        // Regular Operations
+        private static long currentCount = 0;
+
+        public static void Initialize(int extraQueueLevels, int maxThreads)
+        {
+            UPS.maxThreads = maxThreads == 0 ? 999 : maxThreads;
+            InitializePriorityQueues(Enum.GetValues(typeof(Priority)).Length + extraQueueLevels);
             Interlocked.Exchange(ref isInitiated, 1);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public static void Shutdown()
         {
             Interlocked.Exchange(ref isInitiated, 0);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="func"></param>
+        /// <param name="priority"></param>
+        /// <returns></returns>
         public static async Task<Guid> Enqueue(Func<Task<object>> func, Priority priority)
         {
-            var referencedTask = new ReferencedTask { guid = Guid.NewGuid(), func = func };
-
-            GetQueue((int)priority).Enqueue(referencedTask);
-
-            if (Interlocked.Read(ref isInitiated) == 1)
+            if(Interlocked.Read(ref isInitiated) == 0)
             {
-                await StartProcessing();
-            }
+                var referencedTask = new ReferencedFunc { guid = Guid.NewGuid(), func = func };
+                GetQueue((int)priority).Enqueue(referencedTask);
 
-            return referencedTask.guid;
+                if (Interlocked.Read(ref isProcessing) == 0)
+                {
+                    await StartProcessing();
+                }
+
+                return referencedTask.guid;
+            }
+            else
+            {
+                throw new InvalidOperationException("Service has not been Initiated.");
+            }
         }
 
-        private static void EnqueueFailedFunction(ReferencedTask referencedTask)
+        private static void InitializePriorityQueues(int amountOfQueues)
         {
-            GetQueue(referencedTask.priority).Enqueue(referencedTask);
+            for (int i = 0; i <= amountOfQueues; i++)
+            {
+                concurrentQueues.Add(new ConcurrentQueue<ReferencedFunc>());
+            }
+            maxQueues = concurrentQueues.Count;
         }
 
         private static async Task StartProcessing()
@@ -68,9 +90,9 @@ namespace UPS
                     Interlocked.Exchange(ref isProcessing, 1);
                     foreach (var queue in concurrentQueues)
                     {
-                        if (Interlocked.Read(ref currentCount) < maxThreadNumber)
+                        if (Interlocked.Read(ref currentCount) < maxThreads)
                         {
-                            queue.TryDequeue(out ReferencedTask referencedTask);
+                            queue.TryDequeue(out ReferencedFunc referencedTask);
                             await ExecuteAsync(referencedTask);
                         }
                     }
@@ -79,7 +101,7 @@ namespace UPS
             }
         }
 
-        private static async Task ExecuteAsync(ReferencedTask referencedTask)
+        private static async Task ExecuteAsync(ReferencedFunc referencedTask)
         {
             object result = null;
 
@@ -90,7 +112,7 @@ namespace UPS
             catch(Exception ex)
             {
                 // After trying the maximun number of attemtps, Enqueue to lower tier
-                if(referencedTask.currentAttempt <= numberOfAttempts)
+                if(referencedTask.currentAttempt <= maxFailedAttempts)
                 {
                     referencedTask.currentAttempt++;
                     await ExecuteAsync(referencedTask);
@@ -98,20 +120,43 @@ namespace UPS
                 else
                 {
                     referencedTask.priority++;
-                    if(referencedTask.priority <= queueNumber)
+                    if(referencedTask.priority <= maxQueues)
                     {
-                        EnqueueFailedFunction(referencedTask);
+                        EnqueueReferencedFunc(referencedTask);
                     }
                     else
                     {
-                        failedTasks.Enqueue(new ReferencedException() { guid = referencedTask.guid, exception = ex });
+                        EnqueueReferencedException(new ReferencedException() { guid = referencedTask.guid, exception = ex });
                     }
                 }
             }
-            completedTasks.Enqueue(new ReferencedResult() { guid = referencedTask.guid, result = result});
+            EnqueueReferencedResult(new ReferencedResult() { guid = referencedTask.guid, result = result});
         }
 
-        private static ConcurrentQueue<ReferencedTask> GetQueue(int priority)
+        private static void EnqueueReferencedResult(ReferencedResult referencedResult)
+        {
+            while (completedFunctions.Count > maxCompletedReferences)
+            {
+                completedFunctions.TryDequeue(out var old);
+            }
+            completedFunctions.Enqueue(referencedResult);
+        }
+
+        private static void EnqueueReferencedException(ReferencedException referencedException)
+        {
+            while(failedFunctions.Count > maxFailedReferences)
+            {
+                failedFunctions.TryDequeue(out var old);
+            }
+            failedFunctions.Enqueue(referencedException);
+        }
+
+        private static void EnqueueReferencedFunc(ReferencedFunc referencedTask)
+        {
+            GetQueue(referencedTask.priority).Enqueue(referencedTask);
+        }
+
+        private static ConcurrentQueue<ReferencedFunc> GetQueue(int priority)
         {
             return concurrentQueues[priority];
         }
