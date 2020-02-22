@@ -13,6 +13,7 @@ jobs:
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: 3.1.100 # SDK Version to use.
+        fetch-depth: 0 # avoid shallow clone so nbgv can do its work.
     - name: Setup Nuget.exe
       uses: warrenbuckley/Setup-Nuget@v1
     - name: Restore packages
