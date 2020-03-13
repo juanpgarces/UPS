@@ -14,15 +14,21 @@ jobs:
       with:
         dotnet-version: 3.1.100 # SDK Version to use.
         fetch-depth: 0 # avoid shallow clone so nbgv can do its work.
+    
     - name: Setup Nuget.exe
       uses: warrenbuckley/Setup-Nuget@v1
+    
     - name: Restore packages
       run: nuget restore src\UPS.sln
-    - uses: aarnott/nbgv@v0.3
-        with:
-            setAllVars: true
-    - run: echo "NBGV_SemVer2 $NBGV_SemVer2"
+    
+    #- name: Run Versioning
+    #  uses: aarnott/nbgv@master
+    #  with:
+    #    setAllVars: true
+    #- run: echo "NBGV_SemVer2 $NBGV_SemVer2"
+    
     - name: Build with dotnet
       run: dotnet build src\UPS.sln --configuration Release
+    
     - name: Test with dotnet
       run: dotnet test UPS.Test\UPS.Test.csproj --verbosity normal
