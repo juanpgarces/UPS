@@ -12,28 +12,28 @@ namespace UPS
     /// <summary>
     /// 
     /// </summary>
-    public static class UPSService
+    public static class FuncManager
     {
         // Lists and Queues
         private static List<ConcurrentQueue<ReferencedFunc>> concurrentQueues = new List<ConcurrentQueue<ReferencedFunc>>();
-        private static ConcurrentQueue<ReferencedResult> completedFunctions = new ConcurrentQueue<ReferencedResult>();
-        private static ConcurrentQueue<ReferencedException> failedFunctions = new ConcurrentQueue<ReferencedException>();
+        private static List<ReferencedResult> completedFunctions = new List<ReferencedResult>();
+        private static List<ReferencedException> failedFunctions = new List<ReferencedException>();
 
         // Operation and Initiation
         private static long isInitiated = 0;
         private static long isProcessing = 0;
         private static int maxQueues = 0;
-        private static int maxFailedAttempts = 4;
         private static long maxThreads = 1;
-        private static int maxFailedReferences = 50;
-        private static int maxCompletedReferences = 50;
+        private static readonly int maxFailedAttempts = 4;
+        private static readonly int maxFailedReferences = 50;
+        private static readonly int maxCompletedReferences = 50;
 
         // Regular Operations
         private static long currentCount = 0;
 
         public static void Initialize(int extraQueueLevels, int maxThreads)
         {
-            UPSService.maxThreads = maxThreads == 0 ? 999 : maxThreads;
+            FuncManager.maxThreads = maxThreads == 0 ? FuncManager.maxThreads : maxThreads;
             InitializePriorityQueues(Enum.GetValues(typeof(Priority)).Length + extraQueueLevels);
             Interlocked.Exchange(ref isInitiated, 1);
         }
@@ -52,7 +52,7 @@ namespace UPS
         /// <param name="func"></param>
         /// <param name="priority"></param>
         /// <returns></returns>
-        public static async Task<Guid> Enqueue(Func<Task<object>> func, Priority priority)
+        public static async Task<Guid> EnqueueAsync(Func<Task<object>> func, Priority priority)
         {
             if(Interlocked.Read(ref isInitiated) == 0)
             {
@@ -70,6 +70,18 @@ namespace UPS
             {
                 throw new InvalidOperationException("Service has not been Initiated.");
             }
+        }
+
+        public static async Task<ReferencedResult> GetResultIfExistsAsync(Guid guid)
+        {
+            // maybe have some logic tha when there is no result found then it looks for that in the exceptions? 
+            // Issues with that is that I would have return a task<object> which I don't really like
+            return completedFunctions.Find(rR => rR.guid == guid);
+        }
+
+        public static async Task<ReferencedException> GetExceptionIfExistsAsync(Guid guid)
+        {
+            return failedFunctions.Find(rR => rR.guid == guid);
         }
 
         private static void InitializePriorityQueues(int amountOfQueues)
@@ -126,29 +138,29 @@ namespace UPS
                     }
                     else
                     {
-                        EnqueueReferencedException(new ReferencedException() { guid = referencedTask.guid, exception = ex });
+                        AddReferencedException(new ReferencedException() { guid = referencedTask.guid, exception = ex });
                     }
                 }
             }
-            EnqueueReferencedResult(new ReferencedResult() { guid = referencedTask.guid, result = result});
+            AddReferencedResult(new ReferencedResult() { guid = referencedTask.guid, result = result});
         }
 
-        private static void EnqueueReferencedResult(ReferencedResult referencedResult)
+        private static void AddReferencedResult(ReferencedResult referencedResult)
         {
             while (completedFunctions.Count > maxCompletedReferences)
             {
-                completedFunctions.TryDequeue(out var old);
+                completedFunctions.RemoveRange(0, maxCompletedReferences);
             }
-            completedFunctions.Enqueue(referencedResult);
+            completedFunctions.Add(referencedResult);
         }
 
-        private static void EnqueueReferencedException(ReferencedException referencedException)
+        private static void AddReferencedException(ReferencedException referencedException)
         {
             while(failedFunctions.Count > maxFailedReferences)
             {
-                failedFunctions.TryDequeue(out var old);
+                failedFunctions.RemoveRange(0, maxFailedReferences);
             }
-            failedFunctions.Enqueue(referencedException);
+            failedFunctions.Add(referencedException);
         }
 
         private static void EnqueueReferencedFunc(ReferencedFunc referencedTask)

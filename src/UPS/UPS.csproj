@@ -20,6 +20,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Folder Include="Services\" />
     <Folder Include="Utilities\" />
   </ItemGroup>
 

@@ -20,7 +20,7 @@ namespace UPS.Test
         public void Enqueue_Without_Initialization_ThrowsExcep()
         {
             // Arrange
-            UPSService.Initialize(2, 5);
+            FuncManager.Initialize(2, 5);
 
             var function = new Func<Task<object>>(async() => {
                 Console.WriteLine("TEST");
@@ -29,7 +29,7 @@ namespace UPS.Test
             // Act
             // Assert
             Assert.ThrowsAsync<InvalidOperationException>(
-                async () => await UPSService.Enqueue(function, Enums.Priority.High)); 
+                async () => await FuncManager.EnqueueAsync(function, Enums.Priority.High)); 
         }
     }
 }
