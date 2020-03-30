@@ -20,7 +20,7 @@ namespace UPS.Test
         public void Enqueue_Without_Initialization_ThrowsExcep()
         {
             // Arrange
-            FuncManager.Initialize(2, 5);
+            FuncManager.Initialize(2, 5, 2000);
 
             var function = new Func<Task<object>>(async() => {
                 Console.WriteLine("TEST");

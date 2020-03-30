@@ -15,7 +15,7 @@ namespace UPS
     public static class FuncManager
     {
         // Lists and Queues
-        private static List<ConcurrentQueue<ReferencedFunc>> concurrentQueues = new List<ConcurrentQueue<ReferencedFunc>>();
+        private static List<ConcurrentQueue<ReferencedFunc<object>>> concurrentQueues = new List<ConcurrentQueue<ReferencedFunc<object>>>();
         private static List<ReferencedResult> completedFunctions = new List<ReferencedResult>();
         private static List<ReferencedException> failedFunctions = new List<ReferencedException>();
 
@@ -31,11 +31,22 @@ namespace UPS
         // Regular Operations
         private static long currentCount = 0;
 
-        public static void Initialize(int extraQueueLevels, int maxThreads)
+        // Timer
+        private static Timer checkQueueTimer;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="extraQueueLevels"></param>
+        /// <param name="maxThreads"></param>
+        /// <param name="period"></param>
+        public static void Initialize(int extraQueueLevels, int maxThreads, int period)
         {
             FuncManager.maxThreads = maxThreads == 0 ? FuncManager.maxThreads : maxThreads;
             InitializePriorityQueues(Enum.GetValues(typeof(Priority)).Length + extraQueueLevels);
             Interlocked.Exchange(ref isInitiated, 1);
+
+            checkQueueTimer = new Timer(checkQueue, null, period, period);
         }
 
         /// <summary>
@@ -56,7 +67,7 @@ namespace UPS
         {
             if(Interlocked.Read(ref isInitiated) == 0)
             {
-                var referencedTask = new ReferencedFunc { guid = Guid.NewGuid(), func = func };
+                var referencedTask = new ReferencedFunc<object> { guid = Guid.NewGuid(), func = func };
                 GetQueue((int)priority).Enqueue(referencedTask);
 
                 if (Interlocked.Read(ref isProcessing) == 0)
@@ -82,7 +93,7 @@ namespace UPS
         {
             if (Interlocked.Read(ref isInitiated) == 0)
             {
-                var referencedTask = new ReferencedFunc { guid = Guid.NewGuid(), func = func, checkpoint = checkpoint };
+                var referencedTask = new ReferencedFunc<object> { guid = Guid.NewGuid(), func = func, checkpoint = checkpoint };
                 GetQueue((int)priority).Enqueue(referencedTask);
 
                 if (Interlocked.Read(ref isProcessing) == 0)
@@ -110,11 +121,22 @@ namespace UPS
             return failedFunctions.Find(rR => rR.guid == guid);
         }
 
+        private static async void checkQueue(object state)
+        {
+            foreach(var queue in concurrentQueues)
+            {
+                if(queue.Count > 0)
+                {
+                    await StartProcessing();
+                }
+            }
+        }
+
         private static void InitializePriorityQueues(int amountOfQueues)
         {
             for (int i = 0; i <= amountOfQueues; i++)
             {
-                concurrentQueues.Add(new ConcurrentQueue<ReferencedFunc>());
+                concurrentQueues.Add(new ConcurrentQueue<ReferencedFunc<object>>());
             }
             maxQueues = concurrentQueues.Count;
         }
@@ -130,17 +152,20 @@ namespace UPS
                     {
                         if (Interlocked.Read(ref currentCount) < maxThreads)
                         {
-                            queue.TryPeek(out ReferencedFunc referencedTask);
-                            if(referencedTask != null && referencedTask.checkpoint != null)
+                            while (!queue.IsEmpty)
                             {
-                                // Find a better way to wait until checkpoint is true
-                                while (await referencedTask.checkpoint.Invoke() != true)
+                                queue.TryPeek(out ReferencedFunc<object> referencedTask);
+                                if (referencedTask != null && referencedTask.checkpoint != null)
                                 {
-
+                                    // Find a better way to wait until checkpoint is true
+                                    if (await referencedTask.checkpoint.Invoke() != true)
+                                    {
+                                        break;
+                                    }
                                 }
+                                queue.TryDequeue(out referencedTask);
+                                await ExecuteAsync(referencedTask);
                             }
-                            queue.TryDequeue(out referencedTask);
-                            await ExecuteAsync(referencedTask);
                         }
                     }
                     Interlocked.Exchange(ref isProcessing, 0);
@@ -148,7 +173,7 @@ namespace UPS
             }
         }
 
-        private static async Task ExecuteAsync(ReferencedFunc referencedTask)
+        private static async Task ExecuteAsync(ReferencedFunc<object> referencedTask)
         {
             object result = null;
 
@@ -198,12 +223,12 @@ namespace UPS
             failedFunctions.Add(referencedException);
         }
 
-        private static void EnqueueReferencedFunc(ReferencedFunc referencedTask)
+        private static void EnqueueReferencedFunc(ReferencedFunc<object> referencedTask)
         {
             GetQueue(referencedTask.priority).Enqueue(referencedTask);
         }
 
-        private static ConcurrentQueue<ReferencedFunc> GetQueue(int priority)
+        private static ConcurrentQueue<ReferencedFunc<object>> GetQueue(int priority)
         {
             return concurrentQueues[priority];
         }

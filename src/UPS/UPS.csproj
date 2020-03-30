@@ -1,13 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.1</TargetFramework>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Authors>Juan P. Garces</Authors>
     <PackageProjectUrl>https://github.com/juanp3053/UPS</PackageProjectUrl>
     <RepositoryUrl>https://github.com/juanp3053/UPS</RepositoryUrl>
     <RepositoryType>Git</RepositoryType>
-    <Description>Asynchronous and Resiliiant library to execture Functions safely</Description>
+    <Description>Asynchronous and Resiliiant library to execute Functions safely</Description>
     <Version>1.0.0</Version>
     <AssemblyVersion>$(Version)</AssemblyVersion>
     <FileVersion>$(Version)</FileVersion>
