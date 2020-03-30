@@ -20,10 +20,10 @@ namespace UPS
         private static List<ReferencedException> failedFunctions = new List<ReferencedException>();
 
         // Operation and Initiation
-        private static long isInitiated = 0;
-        private static long isProcessing = 0;
+        private static int isInitiated = 0;
+        private static int isProcessing = 0;
         private static int maxQueues = 0;
-        private static long maxThreads = 1;
+        private static int maxThreads = 1;
         private static readonly int maxFailedAttempts = 4;
         private static readonly int maxFailedReferences = 50;
         private static readonly int maxCompletedReferences = 50;
@@ -42,7 +42,7 @@ namespace UPS
         /// <param name="period"></param>
         public static void Initialize(int extraQueueLevels, int maxThreads, int period)
         {
-            if(Interlocked.Read(ref isInitiated) == 0)
+            if(Interlocked.CompareExchange(ref isInitiated, 0, 0) == 0)
             {
                 FuncManager.maxThreads = maxThreads == 0 ? FuncManager.maxThreads : maxThreads;
                 InitializePriorityQueues(Enum.GetValues(typeof(Priority)).Length + extraQueueLevels);
@@ -57,7 +57,7 @@ namespace UPS
         /// </summary>
         public static void Shutdown()
         {
-            if (Interlocked.Read(ref isInitiated) == 1)
+            if (Interlocked.CompareExchange(ref isInitiated, 0, 0) == 1)
             {
                 Interlocked.Exchange(ref isInitiated, 0);
                 checkQueueTimer?.Dispose();
@@ -72,12 +72,12 @@ namespace UPS
         /// <returns></returns>
         public static async Task<Guid> EnqueueAsync(Func<Task<object>> func, Priority priority)
         {
-            if(Interlocked.Read(ref isInitiated) == 0)
+            if (Interlocked.CompareExchange(ref isInitiated, 0, 0) == 1)
             {
                 var referencedTask = new ReferencedFunc<object> { guid = Guid.NewGuid(), func = func };
                 GetQueue((int)priority).Enqueue(referencedTask);
 
-                if (Interlocked.Read(ref isProcessing) == 0)
+                if (Interlocked.CompareExchange(ref isProcessing, 0, 0) == 0)
                 {
                     await StartProcessing();
                 }
@@ -98,12 +98,12 @@ namespace UPS
         /// <returns></returns>
         public static async Task<Guid> EnqueueAsync(Func<Task<object>> func, Func<Task<bool>> checkpoint, Priority priority)
         {
-            if (Interlocked.Read(ref isInitiated) == 0)
+            if (Interlocked.CompareExchange(ref isInitiated, 0, 0) == 1)
             {
                 var referencedTask = new ReferencedFunc<object> { guid = Guid.NewGuid(), func = func, checkpoint = checkpoint };
                 GetQueue((int)priority).Enqueue(referencedTask);
 
-                if (Interlocked.Read(ref isProcessing) == 0)
+                if (Interlocked.CompareExchange(ref isProcessing, 0, 0) == 0)
                 {
                     await StartProcessing();
                 }
@@ -150,14 +150,14 @@ namespace UPS
 
         private static async Task StartProcessing()
         {
-            if(Interlocked.Read(ref isProcessing) == 0)
+            if (Interlocked.CompareExchange(ref isInitiated, 0, 0) == 1)
             {
                 await Task.Factory.StartNew(async () => {
 
                     Interlocked.Exchange(ref isProcessing, 1);
                     foreach (var queue in concurrentQueues)
                     {
-                        if (Interlocked.Read(ref currentCount) < maxThreads)
+                        if (Interlocked.CompareExchange(ref currentCount, 0, 0) < maxThreads)
                         {
                             while (!queue.IsEmpty)
                             {
