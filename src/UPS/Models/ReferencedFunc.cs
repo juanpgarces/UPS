@@ -10,6 +10,7 @@ namespace UPS.Models
     {
         public Guid guid { get; set; }
         public Func<Task<object>> func { get; set; }
+        public Func<Task<bool>> checkpoint { get; set; }
         public int priority { get; set; }
         public long currentAttempt { get; set; }
     }

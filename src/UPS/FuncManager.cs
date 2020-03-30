@@ -72,6 +72,32 @@ namespace UPS
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="func"></param>
+        /// <param name="priority"></param>
+        /// <returns></returns>
+        public static async Task<Guid> EnqueueAsync(Func<Task<object>> func, Func<Task<bool>> checkpoint, Priority priority)
+        {
+            if (Interlocked.Read(ref isInitiated) == 0)
+            {
+                var referencedTask = new ReferencedFunc { guid = Guid.NewGuid(), func = func, checkpoint = checkpoint };
+                GetQueue((int)priority).Enqueue(referencedTask);
+
+                if (Interlocked.Read(ref isProcessing) == 0)
+                {
+                    await StartProcessing();
+                }
+
+                return referencedTask.guid;
+            }
+            else
+            {
+                throw new InvalidOperationException("Service has not been Initiated.");
+            }
+        }
+
         public static async Task<ReferencedResult> GetResultIfExistsAsync(Guid guid)
         {
             // maybe have some logic tha when there is no result found then it looks for that in the exceptions? 
@@ -104,7 +130,16 @@ namespace UPS
                     {
                         if (Interlocked.Read(ref currentCount) < maxThreads)
                         {
-                            queue.TryDequeue(out ReferencedFunc referencedTask);
+                            queue.TryPeek(out ReferencedFunc referencedTask);
+                            if(referencedTask != null && referencedTask.checkpoint != null)
+                            {
+                                // Find a better way to wait until checkpoint is true
+                                while (await referencedTask.checkpoint.Invoke() != true)
+                                {
+
+                                }
+                            }
+                            queue.TryDequeue(out referencedTask);
                             await ExecuteAsync(referencedTask);
                         }
                     }
