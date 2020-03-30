@@ -42,11 +42,14 @@ namespace UPS
         /// <param name="period"></param>
         public static void Initialize(int extraQueueLevels, int maxThreads, int period)
         {
-            FuncManager.maxThreads = maxThreads == 0 ? FuncManager.maxThreads : maxThreads;
-            InitializePriorityQueues(Enum.GetValues(typeof(Priority)).Length + extraQueueLevels);
-            Interlocked.Exchange(ref isInitiated, 1);
+            if(Interlocked.Read(ref isInitiated) == 0)
+            {
+                FuncManager.maxThreads = maxThreads == 0 ? FuncManager.maxThreads : maxThreads;
+                InitializePriorityQueues(Enum.GetValues(typeof(Priority)).Length + extraQueueLevels);
+                Interlocked.Exchange(ref isInitiated, 1);
 
-            checkQueueTimer = new Timer(checkQueue, null, period, period);
+                checkQueueTimer = new Timer(checkQueue, null, period, period);
+            }
         }
 
         /// <summary>
@@ -54,7 +57,11 @@ namespace UPS
         /// </summary>
         public static void Shutdown()
         {
-            Interlocked.Exchange(ref isInitiated, 0);
+            if (Interlocked.Read(ref isInitiated) == 1)
+            {
+                Interlocked.Exchange(ref isInitiated, 0);
+                checkQueueTimer?.Dispose();
+            }
         }
 
         /// <summary>
