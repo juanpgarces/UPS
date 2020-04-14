@@ -10,21 +10,22 @@ using UPS.Models;
 namespace UPS
 {
     /// <summary>
-    /// 
+    ///
     /// </summary>
-    public static class FuncManager
+    public static class FuncPriorityManager
     {
         // Lists and Queues
         private static List<ConcurrentQueue<ReferencedFunc<object>>> concurrentQueues = new List<ConcurrentQueue<ReferencedFunc<object>>>();
+
         private static List<ReferencedResult> completedFunctions = new List<ReferencedResult>();
         private static List<ReferencedException> failedFunctions = new List<ReferencedException>();
 
         // Operation and Initiation
         private static int isInitiated = 0;
+
         private static int isProcessing = 0;
         private static int maxQueues = 0;
         private static int maxThreads = 1;
-        private static readonly int maxFailedAttempts = 4;
         private static readonly int maxFailedReferences = 50;
         private static readonly int maxCompletedReferences = 50;
 
@@ -35,16 +36,16 @@ namespace UPS
         private static Timer checkQueueTimer;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="extraQueueLevels"></param>
         /// <param name="maxThreads"></param>
         /// <param name="period"></param>
         public static void Initialize(int extraQueueLevels, int maxThreads, int period)
         {
-            if(Interlocked.CompareExchange(ref isInitiated, 0, 0) == 0)
+            if (Interlocked.CompareExchange(ref isInitiated, 0, 0) == 0)
             {
-                FuncManager.maxThreads = maxThreads == 0 ? FuncManager.maxThreads : maxThreads;
+                FuncPriorityManager.maxThreads = maxThreads == 0 ? FuncPriorityManager.maxThreads : maxThreads;
                 InitializePriorityQueues(Enum.GetValues(typeof(Priority)).Length + extraQueueLevels);
                 Interlocked.Exchange(ref isInitiated, 1);
 
@@ -53,7 +54,7 @@ namespace UPS
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public static void Shutdown()
         {
@@ -65,38 +66,24 @@ namespace UPS
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="func"></param>
         /// <param name="priority"></param>
         /// <returns></returns>
         public static async Task<Guid> EnqueueAsync(Func<Task<object>> func, Priority priority)
         {
-            if (Interlocked.CompareExchange(ref isInitiated, 0, 0) == 1)
-            {
-                var referencedTask = new ReferencedFunc<object> { guid = Guid.NewGuid(), func = func };
-                GetQueue((int)priority).Enqueue(referencedTask);
-
-                if (Interlocked.CompareExchange(ref isProcessing, 0, 0) == 0)
-                {
-                    await StartProcessing();
-                }
-
-                return referencedTask.guid;
-            }
-            else
-            {
-                throw new InvalidOperationException("Service has not been Initiated.");
-            }
+            return await EnqueueAsync(func, null, priority);
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="func"></param>
+        /// <param name="checkpoint"></param>
         /// <param name="priority"></param>
         /// <returns></returns>
-        public static async Task<Guid> EnqueueAsync(Func<Task<object>> func, Func<Task<bool>> checkpoint, Priority priority)
+        public static async Task<Guid> EnqueueAsync(Func<Task<object>> func, Func<Task<bool>> checkpoint, Priority priority = Priority.High)
         {
             if (Interlocked.CompareExchange(ref isInitiated, 0, 0) == 1)
             {
@@ -118,7 +105,7 @@ namespace UPS
 
         public static async Task<ReferencedResult> GetResultIfExistsAsync(Guid guid)
         {
-            // maybe have some logic tha when there is no result found then it looks for that in the exceptions? 
+            // maybe have some logic tha when there is no result found then it looks for that in the exceptions?
             // Issues with that is that I would have return a task<object> which I don't really like
             return completedFunctions.Find(rR => rR.guid == guid);
         }
@@ -130,9 +117,9 @@ namespace UPS
 
         private static async void checkQueue(object state)
         {
-            foreach(var queue in concurrentQueues)
+            foreach (var queue in concurrentQueues)
             {
-                if(queue.Count > 0)
+                if (queue.Count > 0)
                 {
                     await StartProcessing();
                 }
@@ -152,8 +139,8 @@ namespace UPS
         {
             if (Interlocked.CompareExchange(ref isInitiated, 0, 0) == 1)
             {
-                await Task.Factory.StartNew(async () => {
-
+                await Task.Factory.StartNew(async () =>
+                {
                     Interlocked.Exchange(ref isProcessing, 1);
                     foreach (var queue in concurrentQueues)
                     {
@@ -188,28 +175,28 @@ namespace UPS
             {
                 result = await referencedTask.func.Invoke();
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 // After trying the maximun number of attemtps, Enqueue to lower tier
-                if(referencedTask.currentAttempt <= maxFailedAttempts)
-                {
-                    referencedTask.currentAttempt++;
-                    await ExecuteAsync(referencedTask);
-                }
-                else
-                {
-                    referencedTask.priority++;
-                    if(referencedTask.priority <= maxQueues)
-                    {
-                        EnqueueReferencedFunc(referencedTask);
-                    }
-                    else
-                    {
-                        AddReferencedException(new ReferencedException() { guid = referencedTask.guid, exception = ex });
-                    }
-                }
+                //if (referencedTask.currentAttempt <= maxFailedAttempts)
+                //{
+                //    referencedTask.currentAttempt++;
+                //await ExecuteAsync(referencedTask);
+                ////}
+                ////else
+                ////{
+                //referencedTask.priority++;
+                //if (referencedTask.priority <= maxQueues)
+                //{
+                //    EnqueueReferencedFunc(referencedTask);
+                //}
+                //else
+                //{
+                AddReferencedException(new ReferencedException() { guid = referencedTask.guid, exception = ex });
+                //}
+                //}
             }
-            AddReferencedResult(new ReferencedResult() { guid = referencedTask.guid, result = result});
+            AddReferencedResult(new ReferencedResult() { guid = referencedTask.guid, result = result });
         }
 
         private static void AddReferencedResult(ReferencedResult referencedResult)
@@ -223,7 +210,7 @@ namespace UPS
 
         private static void AddReferencedException(ReferencedException referencedException)
         {
-            while(failedFunctions.Count > maxFailedReferences)
+            while (failedFunctions.Count > maxFailedReferences)
             {
                 failedFunctions.RemoveRange(0, maxFailedReferences);
             }
