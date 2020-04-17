@@ -1,4 +1,4 @@
-name: .NET Core
+name: .NET Package Artifact
 
 on: [push]
 
@@ -8,27 +8,21 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@master
     - name: Setup .NET Core
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: 3.1.100 # SDK Version to use.
-        fetch-depth: 0 # avoid shallow clone so nbgv can do its work.
-    
-    - name: Setup Nuget.exe
-      uses: warrenbuckley/Setup-Nuget@v1
-    
     - name: Restore packages
       run: nuget restore src\UPS.sln
-    
-    #- name: Run Versioning
-    #  uses: aarnott/nbgv@master
-    #  with:
-    #    setAllVars: true
-    #- run: echo "NBGV_SemVer2 $NBGV_SemVer2"
-    
-    - name: Build with dotnet
+    - name: Run Unit Tests
+      run: dotnet test UPS.Test\UPS.Test.csproj
+    - name: .NET Build
       run: dotnet build src\UPS.sln --configuration Release
-    
-    - name: Test with dotnet
-      run: dotnet test UPS.Test\UPS.Test.csproj --verbosity normal
+    - name: Create the package
+      run: dotnet pack --configuration Release src\UPS.sln
+   
+    - uses: actions/upload-artifact@v1
+    - with:
+        name: NuGet-Pckg-Artifact
+        path: src\UPS\bin\Release\*.nupkg
