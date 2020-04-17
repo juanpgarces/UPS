@@ -25,7 +25,7 @@ jobs:
       run: dotnet build src\UPS.sln --configuration Release
     - name: Create the package
       run: dotnet publish --configuration Release src\UPS.sln
-       - uses: actions/upload-artifact@v1
+    - uses: actions/upload-artifact@v1
       with:
         name: NuGet-Pckg-Artifact
         path: src\UPS\bin\Release\netstandard2.0\publish\*.nupkg
