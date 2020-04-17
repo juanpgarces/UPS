@@ -24,7 +24,7 @@ jobs:
     - name: .NET Build
       run: dotnet build src\UPS.sln --configuration Release
     - name: Create the package
-      run: dotnet pack --configuration Release src\UPS.sln
+      run: dotnet publish --configuration Release src\UPS.sln
    
     - uses: actions/upload-artifact@v1
       with:
