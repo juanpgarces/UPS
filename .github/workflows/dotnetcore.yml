@@ -23,8 +23,10 @@ jobs:
       run: dotnet test UPS.Test\UPS.Test.csproj
     - name: .NET Build
       run: dotnet build src\UPS.sln --configuration Release
-    - name: Create the package
+    - name: Publish
       run: dotnet publish --configuration Release src\UPS.sln
+    - name: Create the package
+      run: dotnet pack --configuration Release src\UPS.sln
     - uses: actions/upload-artifact@v1
       with:
         name: NuGet-Pckg-Artifact
