@@ -28,8 +28,4 @@ jobs:
     - uses: actions/upload-artifact@v1
       with:
         name: NuGet-Pckg-Artifact
-        path: src\UPS\bin\Release\netstandard2.0\publish\
-    - uses: actions/upload-artifact@v1
-      with:
-        name: NuGet-Pckg-Artifact
-        path: src\UPS\bin\Release\**\publish\
+        path: src\UPS\bin\Release\netstandard2.0\
