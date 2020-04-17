@@ -23,6 +23,6 @@ jobs:
       run: dotnet pack --configuration Release src\UPS.sln
    
     - uses: actions/upload-artifact@v1
-    - with:
+      with:
         name: NuGet-Pckg-Artifact
         path: src\UPS\bin\Release\*.nupkg
