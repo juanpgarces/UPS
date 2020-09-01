@@ -137,7 +137,7 @@ namespace UPS
 
         private static async Task StartProcessing()
         {
-            if (Interlocked.CompareExchange(ref isInitiated, 0, 0) == 1)
+            if (Interlocked.CompareExchange(ref isInitiated, 0, 0) == 1 && Interlocked.CompareExchange(ref isProcessing, 0, 0) == 0)
             {
                 await Task.Factory.StartNew(async () =>
                 {
