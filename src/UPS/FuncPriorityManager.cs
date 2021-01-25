@@ -162,6 +162,10 @@ namespace UPS
                                         break;
                                     }
                                 }
+                                else if (referencedTask == null)
+                                {
+                                    queue.TryDequeue(out referencedTask);
+                                }
                             }
                         }
                     }

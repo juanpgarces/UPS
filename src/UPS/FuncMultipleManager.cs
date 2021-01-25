@@ -126,6 +126,10 @@ namespace UPS
                                     break;
                                 }
                             }
+                            else if (referencedTask == null)
+                            {
+                                queue.TryDequeue(out referencedTask);
+                            }
                         }
                         Interlocked.Decrement(ref currentCount);
                     }, TaskCreationOptions.LongRunning);
