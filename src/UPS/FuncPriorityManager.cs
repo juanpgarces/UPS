@@ -152,13 +152,16 @@ namespace UPS
                                 if (referencedTask != null && referencedTask.checkpoint != null)
                                 {
                                     // Find a better way to wait until checkpoint is true
-                                    if (await referencedTask.checkpoint.Invoke() != true)
+                                    if (await referencedTask.checkpoint.Invoke() == true)
+                                    {
+                                        queue.TryDequeue(out referencedTask);
+                                        await ExecuteAsync(referencedTask);
+                                    }
+                                    else
                                     {
                                         break;
                                     }
                                 }
-                                queue.TryDequeue(out referencedTask);
-                                await ExecuteAsync(referencedTask);
                             }
                         }
                     }
@@ -173,7 +176,7 @@ namespace UPS
 
             try
             {
-                result = await referencedTask.func.Invoke();
+                result = await referencedTask?.func?.Invoke();
             }
             catch (Exception ex)
             {
