@@ -118,8 +118,8 @@ namespace UPS
                                 // Find a better way to wait until checkpoint is true
                                 if (await referencedTask.checkpoint.Invoke() == true)
                                 {
-                                    queue.TryDequeue(out referencedTask);
-                                    await ExecuteAsync(referencedTask);
+                                    if (queue.TryDequeue(out ReferencedFunc<object> dequeuedReferencedTask))
+                                        await ExecuteAsync(dequeuedReferencedTask);
                                 }
                                 else
                                 {
@@ -141,7 +141,7 @@ namespace UPS
         {
             object result = null;
 
-            result = await referencedTask?.func?.Invoke();
+            result = await (referencedTask?.func?.Invoke());
 
             //try
             //{
