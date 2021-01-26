@@ -113,10 +113,15 @@ namespace UPS
                         while (!queue.IsEmpty)
                         {
                             queue.TryPeek(out ReferencedFunc<object> referencedTask);
-                            if (referencedTask != null && referencedTask.checkpoint != null)
+                            if (referencedTask != null)
                             {
-                                // Find a better way to wait until checkpoint is true
-                                if (await referencedTask.checkpoint.Invoke() == true)
+                                // Accounts for Tasks Not specifying a non-required Checkpoint                                
+                                if (referencedTask.checkpoint == null)
+                                {
+                                    if (queue.TryDequeue(out ReferencedFunc<object> dequeuedReferencedTask))
+                                        await ExecuteAsync(dequeuedReferencedTask);
+                                }
+                                else if(await (referencedTask.checkpoint?.Invoke()) == true)
                                 {
                                     if (queue.TryDequeue(out ReferencedFunc<object> dequeuedReferencedTask))
                                         await ExecuteAsync(dequeuedReferencedTask);
@@ -126,7 +131,7 @@ namespace UPS
                                     break;
                                 }
                             }
-                            else if (referencedTask == null)
+                            else
                             {
                                 queue.TryDequeue(out referencedTask);
                             }
@@ -139,36 +144,7 @@ namespace UPS
 
         private static async Task ExecuteAsync(ReferencedFunc<object> referencedTask)
         {
-            object result = null;
-
-            result = await (referencedTask?.func?.Invoke());
-
-            //try
-            //{
-            //    result = await referencedTask.func.Invoke();
-            //}
-            //catch (Exception ex)
-            //{
-            //    // After trying the maximun number of attemtps, Enqueue to lower tier
-            //    if (referencedTask.currentAttempt <= maxFailedAttempts)
-            //    {
-            //        referencedTask.currentAttempt++;
-            //        await ExecuteAsync(referencedTask);
-            //    }
-            //    else
-            //    {
-            //        //referencedTask.priority++;
-            //        //if (referencedTask.priority <= maxQueues)
-            //        //{
-            //        //    EnqueueReferencedFunc(referencedTask);
-            //        //}
-            //        //else
-            //        //{
-            //        //    //AddReferencedException(new ReferencedException() { guid = referencedTask.guid, exception = ex });
-            //        //}
-            //    }
-            //}
-            //AddReferencedResult(new ReferencedResult() { guid = referencedTask.guid, result = result });
+            await (referencedTask?.func?.Invoke());
         }
 
         //private static void AddReferencedResult(ReferencedResult referencedResult)
