@@ -21,15 +21,15 @@ jobs:
       with:
         nuget-version: 'latest'
     - name: Restore packages
-      run: nuget restore src\UPS.csproj
+      run: nuget restore src\UPS.sln
     - name: .NET Build
       run: dotnet build src\UPS.sln --configuration Release
     - name: Create the package
-      run: dotnet publish --configuration Release src\UPS.csproj
+      run: dotnet publish --configuration Release src\UPS\UPS.csproj
     - name: Publish to NuGet
       uses: brandedoutcast/publish-nuget@v2
       with:
-        PROJECT_FILE_PATH: src\UPS.csproj
+        PROJECT_FILE_PATH: src\UPS\UPS.csproj
         VERSION_REGEX: '^\s*<PackageVersion>(.*)<\/PackageVersion>\s*$'
         TAG_FORMAT: '*'
         NUGET_KEY: ${{secrets.NUGET_API_KEY}}
