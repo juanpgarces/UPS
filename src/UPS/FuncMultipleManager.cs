@@ -25,6 +25,9 @@ namespace UPS
         // Regular Operations
         private static long currentCount = 0;
 
+        // Error Handling
+        private static Func<Exception, Task> funcExceptionLogger = null;
+
         /// <summary>
         /// Amount of Threads used to Run Tasks
         /// </summary>
@@ -61,6 +64,14 @@ namespace UPS
             await StartProcessing(queueName);
 
             return referencedTask.guid;
+        }
+
+        public static async Task SetErrorLoggingFunction(Func<Exception, Task> myFuncExceptionLogger)
+        {
+            if (myFuncExceptionLogger != null)
+            {
+                funcExceptionLogger = myFuncExceptionLogger;
+            }
         }
 
         //public static async Task<ReferencedResult> GetResultIfExistsAsync(Guid guid)
@@ -109,34 +120,51 @@ namespace UPS
                 {
                     await Task.Factory.StartNew(async () =>
                     {
-                        Interlocked.Increment(ref currentCount);
-                        while (!queue.IsEmpty)
+                        try
                         {
-                            queue.TryPeek(out ReferencedFunc<object> referencedTask);
-                            if (referencedTask != null)
+                            Interlocked.Increment(ref currentCount);
+                            while (!queue.IsEmpty)
                             {
-                                // Accounts for Tasks Not specifying a non-required Checkpoint                                
-                                if (referencedTask.checkpoint == null)
+                                try
                                 {
-                                    if (queue.TryDequeue(out ReferencedFunc<object> dequeuedReferencedTask))
-                                        await ExecuteAsync(dequeuedReferencedTask);
+                                    queue.TryPeek(out ReferencedFunc<object> referencedTask);
+                                    if (referencedTask != null)
+                                    {
+                                        // Accounts for Tasks Not specifying a non-required Checkpoint                                
+                                        if (referencedTask.checkpoint == null)
+                                        {
+                                            if (queue.TryDequeue(out ReferencedFunc<object> dequeuedReferencedTask))
+                                                await ExecuteAsync(dequeuedReferencedTask);
+                                        }
+                                        else if(await (referencedTask.checkpoint?.Invoke()) == true)
+                                        {
+                                            if (queue.TryDequeue(out ReferencedFunc<object> dequeuedReferencedTask))
+                                                await ExecuteAsync(dequeuedReferencedTask);
+                                        }
+                                        else
+                                        {
+                                            break;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        queue.TryDequeue(out referencedTask);
+                                    }
                                 }
-                                else if(await (referencedTask.checkpoint?.Invoke()) == true)
+                                catch (Exception ex)
                                 {
-                                    if (queue.TryDequeue(out ReferencedFunc<object> dequeuedReferencedTask))
-                                        await ExecuteAsync(dequeuedReferencedTask);
+                                    await (funcExceptionLogger?.Invoke(ex));
                                 }
-                                else
-                                {
-                                    break;
-                                }
-                            }
-                            else
-                            {
-                                queue.TryDequeue(out referencedTask);
                             }
                         }
-                        Interlocked.Decrement(ref currentCount);
+                        catch (Exception ex)
+                        {
+                            await (funcExceptionLogger?.Invoke(ex));
+                        }
+                        finally
+                        {
+                            Interlocked.Decrement(ref currentCount);
+                        }
                     }, TaskCreationOptions.LongRunning);
                 }
             }

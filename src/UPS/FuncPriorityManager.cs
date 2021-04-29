@@ -35,14 +35,23 @@ namespace UPS
         // Timer
         private static Timer checkQueueTimer;
 
+        // Error Handling
+        private static Func<Exception, Task> funcExceptionLogger = null;
+
         /// <summary>
         ///
         /// </summary>
         /// <param name="extraQueueLevels"></param>
         /// <param name="maxThreads"></param>
         /// <param name="period"></param>
-        public static void Initialize(int extraQueueLevels, int maxThreads, int period)
+        /// <param name="myFuncExceptionLogger"></param>
+        public static void Initialize(int extraQueueLevels, int maxThreads, int period, Func<Exception, Task> myFuncExceptionLogger = null)
         {
+            if(myFuncExceptionLogger != null)
+            {
+                funcExceptionLogger = myFuncExceptionLogger;
+            }
+
             if (Interlocked.CompareExchange(ref isInitiated, 0, 0) == 0)
             {
                 FuncPriorityManager.maxThreads = maxThreads == 0 ? FuncPriorityManager.maxThreads : maxThreads;
@@ -141,40 +150,57 @@ namespace UPS
             {
                 await Task.Factory.StartNew(async () =>
                 {
-                    Interlocked.Exchange(ref isProcessing, 1);
-                    foreach (var queue in concurrentQueues)
+                    try
                     {
-                        if (Interlocked.CompareExchange(ref currentCount, 0, 0) < maxThreads)
+                        Interlocked.Exchange(ref isProcessing, 1);
+                        foreach (var queue in concurrentQueues)
                         {
-                            while (!queue.IsEmpty)
+                            if (Interlocked.CompareExchange(ref currentCount, 0, 0) < maxThreads)
                             {
-                                queue.TryPeek(out ReferencedFunc<object> referencedTask);
-                                if (referencedTask != null)
+                                while (!queue.IsEmpty)
                                 {
-                                    // Accounts for Tasks Not specifying a non-required Checkpoint
-                                    if (referencedTask.checkpoint == null)
+                                    try
                                     {
-                                        if (queue.TryDequeue(out ReferencedFunc<object> dequeuedReferencedTask))
-                                            await ExecuteAsync(dequeuedReferencedTask);
+                                        queue.TryPeek(out ReferencedFunc<object> referencedTask);
+                                        if (referencedTask != null)
+                                        {
+                                            // Accounts for Tasks Not specifying a non-required Checkpoint
+                                            if (referencedTask.checkpoint == null)
+                                            {
+                                                if (queue.TryDequeue(out ReferencedFunc<object> dequeuedReferencedTask))
+                                                    await ExecuteAsync(dequeuedReferencedTask);
+                                            }
+                                            else if(await (referencedTask.checkpoint?.Invoke()) == true)
+                                            {
+                                                if (queue.TryDequeue(out ReferencedFunc<object> dequeuedReferencedTask))
+                                                    await ExecuteAsync(dequeuedReferencedTask);                                   
+                                            }
+                                            else
+                                            {
+                                                break;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            queue.TryDequeue(out referencedTask);
+                                        }
                                     }
-                                    else if(await (referencedTask.checkpoint?.Invoke()) == true)
+                                    catch (Exception ex)
                                     {
-                                        if (queue.TryDequeue(out ReferencedFunc<object> dequeuedReferencedTask))
-                                            await ExecuteAsync(dequeuedReferencedTask);                                   
+                                        await (funcExceptionLogger?.Invoke(ex));
                                     }
-                                    else
-                                    {
-                                        break;
-                                    }
-                                }
-                                else
-                                {
-                                    queue.TryDequeue(out referencedTask);
                                 }
                             }
-                        }
+                        }               
                     }
-                    Interlocked.Exchange(ref isProcessing, 0);
+                    catch (Exception ex)
+                    {
+                        await (funcExceptionLogger?.Invoke(ex));
+                    }
+                    finally
+                    {
+                        Interlocked.Exchange(ref isProcessing, 0);
+                    }
                 }, TaskCreationOptions.LongRunning);
             }
         }
@@ -182,7 +208,6 @@ namespace UPS
         private static async Task ExecuteAsync(ReferencedFunc<object> referencedTask)
         {            
             await (referencedTask?.func?.Invoke());
-            //AddReferencedResult(new ReferencedResult() { guid = referencedTask.guid, result = result });
         }
 
         private static void AddReferencedResult(ReferencedResult referencedResult)
