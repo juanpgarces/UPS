@@ -1,4 +1,4 @@
-# UPS
+# UPS/FuncManager
 A Lightweight Asynchronous Library to Manage Function Execution and Increase resiliency by using a set of Queue Systems and a Checkpoints to ensure appropriate execution.
 
 ## Getting Started
