@@ -237,21 +237,6 @@ namespace UPS
         private static async Task ExecuteAsync(ReferencedFunc<object> referencedTask)
         {
             await (referencedTask?.func?.Invoke());
-        }
-
-        /// <summary>
-        /// Cleans up the Resources. This is called periodically by the Timer. It will remove Queues that are empty and Timers that are not being used.
-        /// </summary>
-        private static void CleanupResources()
-        {
-            foreach (var timerEntry in concurrentTimers)
-            {
-                if (timerEntry.Value.Change(Timeout.Infinite, Timeout.Infinite) == 0) // If the timer is due for disposal
-                {
-                    timerEntry.Value.Dispose();
-                    concurrentTimers.TryRemove(timerEntry.Key, out _);
-                }
-            }
         }      
     }
 }
