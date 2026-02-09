@@ -17,7 +17,7 @@ namespace UPS.Test
         }
 
         [Fact]
-        public void Enqueue_Without_Initialization_ThrowsExcep()
+        public async Task Enqueue_Without_Initialization_ThrowsExcep()
         {
             // Arrange
             FuncPriorityManager.Initialize(2, 5, 2000);
@@ -29,7 +29,7 @@ namespace UPS.Test
             });
             // Act
             // Assert
-            Assert.ThrowsAsync<InvalidOperationException>(
+            await Assert.ThrowsAsync<InvalidOperationException>(
                 async () => await FuncPriorityManager.EnqueueAsync(function, Enums.Priority.High));
         }
     }
