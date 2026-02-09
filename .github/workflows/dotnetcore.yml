@@ -8,17 +8,13 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@master
-    - name: Setup .NET Core
-      uses: actions/setup-dotnet@v1
+    - uses: actions/checkout@v4
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 3.1.100 # SDK Version to use.
-    - name: Setup NuGet
-      uses: nuget/setup-nuget@v1
-      with:
-        nuget-version: 'latest'
+        dotnet-version: '8.0.x'
     - name: Restore packages
-      run: nuget restore src\UPS.sln
+      run: dotnet restore src\UPS.sln
     - name: Run Unit Tests
       run: dotnet test UPS.Test\UPS.Test.csproj
     - name: .NET Build
@@ -27,7 +23,7 @@ jobs:
       run: dotnet publish --configuration Release src\UPS\UPS.csproj
     - name: Create the package
       run: dotnet pack --configuration Release src\UPS\UPS.csproj
-    - uses: actions/upload-artifact@v1
+    - uses: actions/upload-artifact@v4
       with:
         name: NuGet-Pckg-Artifact
         path: src\UPS\bin\Release\netstandard2.0\

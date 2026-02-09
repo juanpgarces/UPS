@@ -11,17 +11,13 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@master
-    - name: Setup .NET Core
-      uses: actions/setup-dotnet@v1
+    - uses: actions/checkout@v4
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 3.1.100 # SDK Version to use.
-    - name: Setup NuGet
-      uses: nuget/setup-nuget@v1
-      with:
-        nuget-version: 'latest'
+        dotnet-version: '8.0.x'
     - name: Restore packages
-      run: nuget restore src\UPS.sln
+      run: dotnet restore src\UPS.sln
     - name: .NET Build
       run: dotnet build src\UPS.sln --configuration Release
     - name: Create the package
@@ -33,4 +29,3 @@ jobs:
         VERSION_REGEX: '^\s*<Version>(.*)<\/Version>\s*$'
         TAG_FORMAT: '*'
         NUGET_KEY: ${{secrets.NUGET_API_KEY}}
-
